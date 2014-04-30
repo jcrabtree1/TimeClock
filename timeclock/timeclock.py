@@ -185,26 +185,47 @@ if args.lookup:
 if args.report:
     import pandas as pd
     import pandas.io.sql as psql
+    import numpy as np
     import matplotlib.pyplot as plt
-    import matplotlib.dates as dates
-    from numpy import mean
-    # Ideally this will use pandas to report on hours worked and maybe
-    # even provide a chart or something cool like that.
+    # from numpy import mean
     sql = '''
-          SELECT date, total FROM times 
+          SELECT * FROM times 
           WHERE date BETWEEN date('2014-%s-01') 
           AND date('2014-%s-01', 'start of month', '+1 month', '-1 day');
           ''' % (args.report.zfill(2), args.report.zfill(2))
     df = psql.frame_query(sql, conn)
+
+    # Convert strings to pandas datetime format
+    #df.clockin = df.date + df.clockin
+    #df.lunchout = df.date + df.lunchout
+    #df.lunchin = df.date + df.lunchin
+    #df.clockout = df.date + df.clockout
     df.date = pd.to_datetime(df.date)
+    df.clockin = pd.to_datetime(df.clockin)
+    df.lunchout = pd.to_datetime(df.lunchout)
+    df.lunchin = pd.to_datetime(df.lunchin)
+    df.clockout = pd.to_datetime(df.clockout)
+    
+    if args.debug:
+        print "\n Data Types:\n", df.dtypes, df.index.dtype
+
+    # Create 'gross', 'lunch', and 'total' columns
+    df['gross'] = (df.clockout - df.clockin).astype('timedelta64[ns]') / np.timedelta64(1, 'h')
+    df['lunch'] = (df.lunchin - df.lunchout).astype('timedelta64[ns]') / np.timedelta64(1, 'h')
+    df['total'] = df.gross - df.lunch
+
     if args.debug:
         print "\n Data Types:\n", df.dtypes, df.index.dtype
     df = df.set_index('date')
     print "\n\nTotal Hours: %3.2f" % df['total'].sum()
     print "Average daily hours: %3.2f" % df['total'].mean()
     df['average'] = df.total.mean()
+    totaldf = df.copy()
+    totaldf[['Net Daily Hours', 'Average Daily Hours']] = totaldf[['total', 'average']]
+    # totaldf = totaldf.drop(['clockin', 'clockout', 'lunchin', 'lunchout', 
+    #                        'gross', 'lunch', 'total', 'average'], axis=1)
     
-    ax = df.plot(title="Hours Worked in Month %s" % args.report, kind='line')
+    ax = totaldf[['Net Daily Hours', 'Average Daily Hours']].plot(title="Hours Worked in Month %s" % args.report, kind='line')
     ax.set_ylabel('Hours Worked')
     ax.set_xlabel('Date')
     plt.xticks(rotation=45)
