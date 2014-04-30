@@ -186,6 +186,7 @@ if args.report:
     import pandas as pd
     import pandas.io.sql as psql
     import matplotlib.pyplot as plt
+    import matplotlib.dates as dates
     from numpy import mean
     # Ideally this will use pandas to report on hours worked and maybe
     # even provide a chart or something cool like that.
@@ -194,13 +195,20 @@ if args.report:
           WHERE date BETWEEN date('2014-%s-01') 
           AND date('2014-%s-01', 'start of month', '+1 month', '-1 day');
           ''' % (args.report.zfill(2), args.report.zfill(2))
-    df = psql.frame_query(sql, conn, index_col='date')
-    print df.shape
-    print "Total Hours: %10.2f" % df['total'].sum()
-    print "Average daily hours: %10.2f" % df['total'].mean()
+    df = psql.frame_query(sql, conn)
+    df.date = pd.to_datetime(df.date)
+    if args.debug:
+        print "\n Data Types:\n", df.dtypes, df.index.dtype
+    df = df.set_index('date')
+    print "\n\nTotal Hours: %3.2f" % df['total'].sum()
+    print "Average daily hours: %3.2f" % df['total'].mean()
     df['average'] = df.total.mean()
-    df.plot(title="Hours worked in month %s" % args.report,
-            kind='line')
+    
+    ax = df.plot(title="Hours Worked in Month %s" % args.report, kind='line')
+    ax.set_ylabel('Hours Worked')
+    ax.set_xlabel('Date')
+    plt.xticks(rotation=45)
+    
     plt.show()
 
 conn.commit()
