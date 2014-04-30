@@ -62,7 +62,9 @@ parser.add_argument('--lookup', nargs='?', const=today,
                     help="Look up times from a previous record")
 parser.add_argument('-r', '--report', help='Report on monthly hours.')
 parser.add_argument('-d', '--debug', action='store_true', 
-                    help='Debug flag', default=False)
+                    help='Debug the program.', default=False)
+parser.add_argument('-t', '--test', action='store_true', default=False,
+                    help='Run the test suite.')
 
 args = parser.parse_args()
 
@@ -84,8 +86,12 @@ if args.lin:
     validate_time(args.lin)
 
 # Connect to database
-conn = sqlite3.connect("../data/timeclock.db")    
-    
+if args.test:
+    db = '../data/timeclock_test.db'
+else:
+    dc = '../data/timeclock.db'
+conn = sqlite3.connect(db)    
+
 # Clock in
 if vars(args)['in']:
     if args.update:
