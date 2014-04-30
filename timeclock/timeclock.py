@@ -89,7 +89,7 @@ if args.lin:
 if args.test:
     db = '../data/timeclock_test.db'
 else:
-    dc = '../data/timeclock.db'
+    db = '../data/timeclock.db'
 conn = sqlite3.connect(db)    
 
 # Clock in
