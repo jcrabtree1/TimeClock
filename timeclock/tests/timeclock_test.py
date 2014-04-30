@@ -35,4 +35,22 @@ with sqlite3.connect('../../data/timeclock_test.db') as conn:
                   ('2014-03-27', '08:26:00', '13:01:00', '13:41:00', '17:38:00'),
                   ('2014-03-28', '08:33:00', '13:02:00', '13:37:00', '17:51:00'),
                   ('2014-03-31', '08:38:00', '12:50:00', '13:27:00', '17:40:00')]
-    conn.executemany('''INSERT INTO times COL''')
+    conn.executemany('''INSERT INTO times
+                        (date, clockin, lunchout, lunchin, clockout)
+                        VALUES (?,?,?,?,?)''', new_records)
+    conn.commit()
+
+    conn.execute('''
+                 UPDATE times
+                 SET gross = (strftime('%s', clockout) - strftime('%s', clockin)) / 3600.;
+                 '''
+                )
+    conn.execute('''
+                 UPDATE times
+                 SET lunch = (strftime('%s', lunchin) - strftime('%s', lunchout)) / 3600.;
+                 '''
+                )
+    conn.execute('''UPDATE times SET total = gross - lunch;''')
+
+    conn.commit()
+    conn.close()
