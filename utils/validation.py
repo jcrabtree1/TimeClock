@@ -7,7 +7,7 @@ import datetime
 
 def validate_date(date_text):
     '''Make sure string is in YYYY-MM-DD format.'''
-    if date_text == 'now':
+    if date_text == "'now', 'localtime'":
         return 0
     else:
         try:
@@ -18,7 +18,7 @@ def validate_date(date_text):
         
 def validate_time(time_text):
     '''Make sure string is in HH:MM:SS format.'''
-    if time_text == 'now':
+    if time_text == "'now', 'localtime'":
         return 0
     else:
         try:

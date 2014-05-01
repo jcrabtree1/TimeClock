@@ -158,7 +158,7 @@ if args.lout:
         if args.debug:
            print "Creating new lunch out time for today"
         conn.execute(
-            '''UPDATE times SET lunchout=time('%s')
+            '''UPDATE times SET lunchout=time(%s)
                WHERE date=date('now');''' % (args.lout)
         )
         print "Successfully clocked out for lunch at %s." % args.lout
@@ -250,11 +250,15 @@ if args.report:
     totaldf = df.copy()
     totaldf[['Net Daily Hours', 'Average Daily Hours']] = totaldf[['total', 'average']]
     
-    ax = totaldf[['Net Daily Hours', 'Average Daily Hours']].plot(
-            title="Hours Worked in Month %s" % args.report, kind='line')
+    
+    ax = totaldf[['Net Daily Hours', 'Average Daily Hours']].plot(x=df.index,
+            title="Hours Worked in Month %s" % args.report, 
+            figsize=(10, 4), kind='line', colormap='winter')
+    plt.legend(loc='best')
+    plt.subplots_adjust(bottom=0.27)
+    # plt.xticks(df.index, rotation=45)
     ax.set_ylabel('Hours Worked')
     ax.set_xlabel('Date')
-    plt.xticks(rotation=45)
     
     plt.show()
 
