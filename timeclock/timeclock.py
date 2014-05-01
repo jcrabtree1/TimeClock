@@ -3,27 +3,44 @@
 TimeClock is a utility to help keep track of your time.
 
 Flags:
-    --in [HH:MM]   : Clock in for the day.
-    --out [HH:MM]  : Clock out for the day.
-    --lout [HH:MM] : Clock out for lunch.
-    --lin [HH:MM]  : Clock in from lunch.
-    --lookup YYYY-MM-DD : Lookup time for given date.
-    --report STARTDATE [ENDDATE] : Show simple report of time worked
-                                   from STARTDATE to ENDDATE.
-    --help : View this help page
+
+    --in [HH:MM]    : Clock in for the day. Defaults to now.
+
+    --out [HH:MM]   : Clock out for the day.  Defaults to now.
+
+    --lout [HH:MM]  : Clock out for lunch.  Defaults to now.
+
+    --lin [HH:MM]   : Clock in from lunch.  Defaults to now.
+
+    --update, -u YYYY-MM-DD : Update a time from a previous date.
+
+    --lookup [YYYY-MM-DD] : Lookup time for given date.  Defaults to today.
+
+    --report, -r MM : Show simple monthly report of time worked
+                      in month MM (1-12).  Integer month argument required.
+
+    --test, -t : Use the pre-populated test database.
+
+    --debug, -d : Print debug messages to help find errors.
+
+    --help, -h : View this help page.
     
 Usage:
+
  $ TimeClock --in
+
  $ TimeClock --out
+
  $ TimeClock --lookup 2014-04-28
+
  $ TimeClock --report 2014-04-01 2014-04-30
  
 Times are saved into a SQLite database timeclock.db, which
 can be further queried, though this goes beyond the scope of
 this module.
 
-Please send any questions, comments, bug reports, or suggestions
-to Jacob Crabtree (jacrabtree@themyersgroup.net).
+Please use the GitHub page (http://github.com/jcrabtree1/TimeClock) to
+submit any issues, bug reports, or suggestions.
 
 '''
 
@@ -90,7 +107,20 @@ if args.test:
     db = '../data/timeclock_test.db'
 else:
     db = '../data/timeclock.db'
-conn = sqlite3.connect(db)    
+conn = sqlite3.connect(db)
+
+# Check that DB is initialized with the correct schema
+try:
+    conn.execute('''SELECT * FROM times LIMIT 1;''')
+except OperationalError:
+    conn.execute('''
+                 CREATE TABLE times (
+                 date TEXT,
+                 clockin TEXT,
+                 lunchout TEXT,
+                 lunchin TEXT,
+                 clockout TEXT);
+                 ''')
 
 # Clock in
 if vars(args)['in']:
@@ -111,7 +141,7 @@ if vars(args)['in']:
                VALUES (date('now'), time('%s'));''' %
                vars(args)['in']
         )
-        print "Successfully clocked in at %s." % now
+        print "Successfully clocked in at %s." % vars(args)['in']
 
 # Go to lunch.
 if args.lout:
@@ -131,7 +161,7 @@ if args.lout:
             '''UPDATE times SET lunchout=time('%s')
                WHERE date=date('now');''' % (args.lout)
         )
-        print "Successfully clocked out for lunch at %s." % now
+        print "Successfully clocked out for lunch at %s." % args.lout
 
 # Return from lunch
 if args.lin:
@@ -150,7 +180,7 @@ if args.lin:
             '''UPDATE times SET lunchin=time('%s')
                WHERE date=date('now');''' % (args.lin)
         )
-        print "Successfully clocked in from lunch at %s." % now
+        print "Successfully clocked in from lunch at %s." % args.lin
         
 # Clock out
 if args.out:
@@ -169,7 +199,7 @@ if args.out:
             '''UPDATE times SET clockout=time('%s')
                WHERE date=date('now');''' % (args.out)
         )
-        print "Successfully clocked out at %s." % now
+        print "Successfully clocked out at %s." % args.out
 
 # Look up a previous record
 if args.lookup:
@@ -187,7 +217,7 @@ if args.report:
     import pandas.io.sql as psql
     import numpy as np
     import matplotlib.pyplot as plt
-    # from numpy import mean
+
     sql = '''
           SELECT * FROM times 
           WHERE date BETWEEN date('2014-%s-01') 
@@ -196,10 +226,6 @@ if args.report:
     df = psql.frame_query(sql, conn)
 
     # Convert strings to pandas datetime format
-    #df.clockin = df.date + df.clockin
-    #df.lunchout = df.date + df.lunchout
-    #df.lunchin = df.date + df.lunchin
-    #df.clockout = df.date + df.clockout
     df.date = pd.to_datetime(df.date)
     df.clockin = pd.to_datetime(df.clockin)
     df.lunchout = pd.to_datetime(df.lunchout)
@@ -216,16 +242,16 @@ if args.report:
 
     if args.debug:
         print "\n Data Types:\n", df.dtypes, df.index.dtype
+
     df = df.set_index('date')
     print "\n\nTotal Hours: %3.2f" % df['total'].sum()
     print "Average daily hours: %3.2f" % df['total'].mean()
     df['average'] = df.total.mean()
     totaldf = df.copy()
     totaldf[['Net Daily Hours', 'Average Daily Hours']] = totaldf[['total', 'average']]
-    # totaldf = totaldf.drop(['clockin', 'clockout', 'lunchin', 'lunchout', 
-    #                        'gross', 'lunch', 'total', 'average'], axis=1)
     
-    ax = totaldf[['Net Daily Hours', 'Average Daily Hours']].plot(title="Hours Worked in Month %s" % args.report, kind='line')
+    ax = totaldf[['Net Daily Hours', 'Average Daily Hours']].plot(
+            title="Hours Worked in Month %s" % args.report, kind='line')
     ax.set_ylabel('Hours Worked')
     ax.set_xlabel('Date')
     plt.xticks(rotation=45)
