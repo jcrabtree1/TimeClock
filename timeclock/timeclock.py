@@ -158,7 +158,7 @@ if args.lout:
         if args.debug:
            print "Creating new lunch out time for today"
         conn.execute(
-            '''UPDATE times SET lunchout=time(%s)
+            '''UPDATE times SET lunchout=time('%s')
                WHERE date=date('now');''' % (args.lout)
         )
         print "Successfully clocked out for lunch at %s." % args.lout
@@ -250,17 +250,18 @@ if args.report:
     totaldf = df.copy()
     totaldf[['Net Daily Hours', 'Average Daily Hours']] = totaldf[['total', 'average']]
     
-    
-    ax = totaldf[['Net Daily Hours', 'Average Daily Hours']].plot(x=df.index,
+    # Plot the results
+    try:
+        ax = totaldf[['Net Daily Hours', 'Average Daily Hours']].plot(x=df.index,
             title="Hours Worked in Month %s" % args.report, 
             figsize=(10, 4), kind='line', colormap='winter')
-    plt.legend(loc='best')
-    plt.subplots_adjust(bottom=0.27)
-    # plt.xticks(df.index, rotation=45)
-    ax.set_ylabel('Hours Worked')
-    ax.set_xlabel('Date')
-    
-    plt.show()
+        plt.legend(loc='best')
+        plt.subplots_adjust(bottom=0.27)
+        ax.set_ylabel('Hours Worked')
+        ax.set_xlabel('Date')
+        plt.show()
+    except TypeError:
+        print "No data currently available for month %s." % args.report
 
 conn.commit()
 conn.close()
