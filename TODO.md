@@ -5,8 +5,8 @@ TODO List for TimeClock
    *main* function and supporting *clock_in*, *clock_out*, etc.
    funtions.
 
- - If no timekeeper database exists, the program should create one
-   and initialize it with the appropriate schema.
+ - ~~If no timekeeper database exists, the program should create one
+   and initialize it with the appropriate schema.~~
 
  - Fix the README.md so that it looks right
 
@@ -22,4 +22,8 @@ TODO List for TimeClock
    required by the user a bit more flexible.
 
  - Maybe allow for keyword arguments like *today* or *now*.
+
+ - Make a branch and re-write the reporting section to do the data
+   manipulation in SQL and then plot the data using gnuplot.
+   Hopefully this will make life a little easier.
 
