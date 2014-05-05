@@ -45,6 +45,7 @@ submit any issues, bug reports, or suggestions.
 '''
 
 import time
+import os
 import sqlite3
 import argparse
 from TimeClock.utils.validation import validate_date, validate_time
@@ -67,13 +68,13 @@ now = time.strftime("%H:%M:%S", time.localtime())
 parser = argparse.ArgumentParser()
 parser.add_argument('-u', '--update', nargs='?', const=today, default="",
                     help="Update a previous record.")
-parser.add_argument('--in', nargs='?', const="'now', 'localtime'", default='',
+parser.add_argument('--in', nargs='?', const="now', 'localtime", default='',
                     help="Clock in for the day.")
-parser.add_argument('--out', nargs='?', const="'now', 'localtime'", default='',
+parser.add_argument('--out', nargs='?', const="now', 'localtime", default='',
                     help="Clock out for the day.")
-parser.add_argument('--lout', nargs='?', const="'now', 'localtime'", default='',
+parser.add_argument('--lout', nargs='?', const="now', 'localtime", default='',
                     help="Go to lunch.")
-parser.add_argument('--lin', nargs='?', const="'now', 'localtime'", default='',
+parser.add_argument('--lin', nargs='?', const="now', 'localtime", default='',
                     help="Return from lunch.")
 parser.add_argument('--lookup', nargs='?', const=today, 
                     help="Look up times from a previous record")
@@ -103,10 +104,12 @@ if args.lin:
     validate_time(args.lin)
 
 # Connect to database
+DB_PATH = r"%s/AppData/Local/TimeClock/timeclock.db" % os.getenv('USERPROFILE')
+TEST_DB_PATH = r"%s/AppData/Local/TimeClock/timeclock_test.db" % os.getenv('USERPROFILE')
 if args.test:
-    db = '../data/timeclock_test.db'
+    db = DB_PATH
 else:
-    db = '../data/timeclock.db'
+    db = TEST_DB_PATH
 conn = sqlite3.connect(db)
 
 # Check that DB is initialized with the correct schema
@@ -127,20 +130,34 @@ if vars(args)['in']:
     if args.update:
         if args.debug:
            print "Updating clockin time for ", args.update
-        conn.execute(
-            '''UPDATE times SET clockin=time('%s')
-               WHERE date=date('%s');''' %
-               (vars(args)['in'], args.update)
-        )
+ 
+        # Check if record already exists
+        res = conn.execute('''
+                           SELECT COUNT(*) FROM times WHERE date = '%s';
+                           ''' % args.update)
+        exists = bool(res.fetchone()[0])
+        if exists:
+            conn.execute('''
+                         UPDATE times SET clockin=time('%s')
+                         WHERE date=date('%s');
+                         ''' %(vars(args)['in'], args.update)
+                         )
+        else:
+            conn.execute( '''
+                          INSERT INTO times (date, clockin) 
+                          VALUES (date('%s'), time('%s'));
+                          ''' % (args.update, vars(args)['in'])
+                         )
         print "Successfully updated clockin time for %s" % args.update
+    
     else:
         if args.debug:
            print "Creating new clockin time for today"
-        conn.execute(
-            '''INSERT INTO times (date, clockin) 
-               VALUES (date('now'), time('%s'));''' %
-               vars(args)['in']
-        )
+        conn.execute('''
+                     INSERT INTO times (date, clockin) 
+                     VALUES (date('now'), time('%s'));
+                     ''' % vars(args)['in']
+                     )
         print "Successfully clocked in at %s." % vars(args)['in']
 
 # Go to lunch.
