@@ -49,6 +49,7 @@ import os
 import sqlite3
 import argparse
 from TimeClock.utils.validation import validate_date, validate_time
+from TimeClock.utils.sqlhelpers import update_record, new_record, check_record_exists
 
 LOOKUPSTRING = \
 """
@@ -129,94 +130,77 @@ except OperationalError:
 if vars(args)['in']:
     if args.update:
         if args.debug:
-           print "Updating clockin time for ", args.update
+            print "Updating clockin time for ", args.update
  
-        # Check if record already exists
-        res = conn.execute('''
-                           SELECT COUNT(*) FROM times WHERE date = '%s';
-                           ''' % args.update)
-        exists = bool(res.fetchone()[0])
-        if exists:
-            conn.execute('''
-                         UPDATE times SET clockin=time('%s')
-                         WHERE date=date('%s');
-                         ''' %(vars(args)['in'], args.update)
-                         )
+        if check_record_exists(conn, args.update):
+            update_record(conn, 'clockin', args.update, vars(args)['in'])
         else:
-            conn.execute( '''
-                          INSERT INTO times (date, clockin) 
-                          VALUES (date('%s'), time('%s'));
-                          ''' % (args.update, vars(args)['in'])
-                         )
-        print "Successfully updated clockin time for %s" % args.update
-    
+            new_record(conn, 'clockin', args.update, vars(args)['in'])
+
     else:
         if args.debug:
-           print "Creating new clockin time for today"
-        conn.execute('''
-                     INSERT INTO times (date, clockin) 
-                     VALUES (date('now'), time('%s'));
-                     ''' % vars(args)['in']
-                     )
-        print "Successfully clocked in at %s." % vars(args)['in']
+            print "Creating new clockin time for today"
+        if check_record_exists(conn):
+            update_record(conn, 'clockin')
+        else:
+            new_record(conn, 'clockin')
 
 # Go to lunch.
 if args.lout:
     if args.update:
         if args.debug:
-           print "Updating lunch out time for ", args.update
-        conn.execute(
-            '''UPDATE times SET lunchout=time('%s')
-               WHERE date=date('%s');''' %
-               (args.lout, args.update)
-        )
-        print "Successfully updated lunch clockout time for %s" % args.update
+            print "Updating lunch out time for ", args.update
+ 
+        if check_record_exists(conn, args.update):
+            update_record(conn, 'lunchout', args.update, args.lout)
+        else:
+            new_record(conn, 'lunchout', args.update, args.lout)
+
     else:
         if args.debug:
-           print "Creating new lunch out time for today"
-        conn.execute(
-            '''UPDATE times SET lunchout=time('%s')
-               WHERE date=date('now');''' % (args.lout)
-        )
-        print "Successfully clocked out for lunch at %s." % args.lout
+            print "Creating new lunch out time for today"
+        if check_record_exists(conn):
+            update_record(conn, 'lunchout')
+        else:
+            new_record(conn, 'lunchout')
 
 # Return from lunch
 if args.lin:
     if args.update:
         if args.debug:
-           print "Updating lunch in time for ", args.update
-        conn.execute(
-            '''UPDATE times SET lunchin=time('%s')
-               WHERE date=date('%s');''' % (args.lin, args.update)
-        )
-        print "Successfully updated lunch clockin time for %s" % args.update
+            print "Updating lunch in time for ", args.update
+ 
+        if check_record_exists(conn, args.update):
+            update_record(conn, 'lunchin', args.update, args.lin)
+        else:
+            new_record(conn, 'lunchin', args.update, args.lin)
+
     else:
         if args.debug:
-           print "Creating new lunch in time for today"
-        conn.execute(
-            '''UPDATE times SET lunchin=time('%s')
-               WHERE date=date('now');''' % (args.lin)
-        )
-        print "Successfully clocked in from lunch at %s." % args.lin
+            print "Creating new lunch in time for today"
+        if check_record_exists(conn):
+            update_record(conn, 'lunchin')
+        else:
+            new_record(conn, 'lunchin')
         
 # Clock out
 if args.out:
     if args.update:
         if args.debug:
-           print "Updating clock out time for ", args.update
-        conn.execute(
-            '''UPDATE times SET clockout=time('%s')
-               WHERE date=date('%s');''' % (args.out, args.update)
-        )
-        print "Successfully updated clock out time for %s" % args.update
+            print "Updating clock out time for ", args.update
+ 
+        if check_record_exists(conn, args.update):
+            update_record(conn, 'clockout', args.update, args.out)
+        else:
+            new_record(conn, 'clockout', args.update, args.out)
+
     else:
         if args.debug:
-           print "Creating new clock out time for today"
-        conn.execute(
-            '''UPDATE times SET clockout=time('%s')
-               WHERE date=date('now');''' % (args.out)
-        )
-        print "Successfully clocked out at %s." % args.out
+            print "Creating new clock out time for today"
+        if check_record_exists(conn):
+            update_record(conn, 'clockout')
+        else:
+            new_record(conn, 'clockout')
 
 # Look up a previous record
 if args.lookup:
@@ -229,6 +213,70 @@ if args.lookup:
                                    'lout', 'lin', 'cout'], row)), '\n'
 
 # Reporting
+if args.report:
+    if int(args.report) in range(1, 13):
+        start_date = "date('2014-%s-01')" % args.report.zfill(2)
+        end_date = "date('2014-%s-01', 'start of month', '+1 month', '-1 day')" % args.report.zfill(2)
+    if args.report in ['ytd', 'YTD']:
+        start_date = "date('2014-01-01')"
+        end_date = "date('now', 'localtime')"
+
+    # Create a temporary reporting table
+    conn.execute('''
+                 SELECT * INTO report
+                 FROM times WHERE date
+                 BETWEEN %s AND %s;
+                 ''' % (start_date, end_date)
+                 )
+    
+    # Add gross, lunch, total, and average columns
+    conn.execute('''
+                 ALTER TABLE report
+                 ADD COLUMN gross REAL;
+                 ''')
+
+    conn.execute('''
+                 ALTER TABLE report
+                 ADD COLUMN lunch REAL;
+                 ''')
+
+    conn.execute('''
+                 ALTER TABLE report
+                 ADD COLUMN total REAL;
+                 ''')
+
+    conn.execute('''
+                 ALTER TABLE report
+                 ADD COLUMN average REAL;
+                 ''')
+
+    # Fill with appropriate values
+    conn.execute('''
+                 UPDATE TABLE report
+                 SET gross = (strftime('%s', 'clockout_time') - strftime('%s', 'clockin_time')) / 3600.;
+                 ''')
+
+    conn.execute('''
+                 UPDATE TABLE report
+                 SET lunch = (strftime('%s', 'lunchin_time') - strftime('%s', 'lunchout_time')) / 3600.;
+                 ''')
+
+    conn.execute('''
+                 UPDATE TABLE report
+                 SET total = gross - lunch;
+                 ''')
+
+    conn.execute('''
+                 UPDATE TABLE report
+                 SET average = average(total);
+                 ''')
+
+    RPT_DATAFILE = r"%s/AppData/Local/TimeClock/rpt.txt" % os.getenv('USERPROFILE')
+    with open(RPT_DATAFILE, 'w') as out:
+        out.write(conn.execute("SELECT * FROM report;").fetchall())
+
+
+
 if args.report:
     import pandas as pd
     import pandas.io.sql as psql
