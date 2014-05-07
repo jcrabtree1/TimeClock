@@ -1,10 +1,6 @@
 TODO List for TimeClock
 =======================
 
- - Tweak the main application (timeclock.py) so that we have a 
-   *main* function and supporting *clock_in*, *clock_out*, etc.
-   funtions.
-
  - ~~If no timekeeper database exists, the program should create one
    and initialize it with the appropriate schema.~~
 
@@ -23,7 +19,7 @@ TODO List for TimeClock
 
  - Maybe allow for keyword arguments like *today* or *now*.
 
- - Make a branch and re-write the reporting section to do the data
+ - ~~Make a branch and re-write the reporting section to do the data
    manipulation in SQL and then plot the data using gnuplot.
-   Hopefully this will make life a little easier.
+   Hopefully this will make life a little easier.~~
 
