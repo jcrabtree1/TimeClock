@@ -30,6 +30,8 @@ setup(name='TimeClock',
       packages=['timeclock'],
       package_data={'timeclock': ['data/timeclock_test.db']},
       console=['timeclock/timeclock.py'],
+      datafiles = [("DLLs", 'DLLs/python27.dll')],
+      zipfile=None,
       options={'py2exe' : {'bundle_files' : 1}},
      )
 
