@@ -3,7 +3,11 @@
 Helper functions for repeated SQL code.
 '''
 
-def update_record(conn, column, date='now', time="now', 'localtime"):
+import time
+
+TODAY = time.strftime("%Y-%m-%d", time.localtime())
+
+def update_record(conn, column, date=TODAY, time="now', 'localtime"):
     '''
     Update a record that already exists.  Column name must be provided, but
     date and time default to the current date and/or time.
@@ -21,7 +25,7 @@ def update_record(conn, column, date='now', time="now', 'localtime"):
         print "Punch accepted!"
     return 0
 
-def new_record(conn, column, date='now', time="now', 'localtime"):
+def new_record(conn, column, date=TODAY, time="now', 'localtime"):
     '''
     Create a new record.  Column name must be provided, but
     date and time default to the current date and/or time.
@@ -39,7 +43,7 @@ def new_record(conn, column, date='now', time="now', 'localtime"):
         print "Punch accepted!"
     return 0
 
-def check_record_exists(conn, date='now'):
+def check_record_exists(conn, date=TODAY):
     '''
     Check whether a record for a given date already exists.
     '''

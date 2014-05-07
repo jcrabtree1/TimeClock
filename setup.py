@@ -17,26 +17,10 @@ but perhaps it could be part of an install script.
 '''
 
 from distutils.core import setup
-import matplotlib
-import glob
 import py2exe
-
-options = {'py2exe' : {'includes' : ['matplotlib', 'pandas', 'numpy', 
-                                     'matplotlib.backends.backend_qt4agg'],
-                       'excludes' : ['_gtkagg', '_tkagg', '_agg2', '_cairo', '_cocoaagg', 
-                                     'matplotlib.numerix.fft', 'PyQt4._qt',
-                                     'matplotlib.numerix.linear_algebra',
-                                     'matplotlib.numerix.random_array', 
-                                     '_fltkagg', '_gtk', '_gtkcairo'],
-                       'dll_excludes' : ['libgdk-win32-2.0-0.dll',
-                                         'libgobject-2.0-0.dll']
-                      }
-          }
-
-data_files = [(r'mpl-data', glob.glob(r'C:\Python27\Lib\site-packages\matplotlib\mpl-data\*.*')),
-              (r'mpl-data', [r'C:\Python27\Lib\site-packages\matplotlib\mpl-data\matplotlibrc']),
-              (r'mpl-data\images',glob.glob(r'C:\Python27\Lib\site-packages\matplotlib\mpl-data\images\*.*')),
-              (r'mpl-data\fonts',glob.glob(r'C:\Python27\Lib\site-packages\matplotlib\mpl-data\fonts\*.*'))]
+import os
+import sys
+import shutil
 
 setup(name='TimeClock',
       version='0.1.0',
@@ -44,9 +28,33 @@ setup(name='TimeClock',
       author='Jacob Crabtree',
       author_email='jacrabtree86@gmail.com',
       packages=['timeclock'],
-      package_data={'timeclock': ['data/timeclock.db']},
+      package_data={'timeclock': ['data/timeclock_test.db']},
       console=['timeclock/timeclock.py'],
-      # data_files=matplotlib.get_py2exe_datafiles(),
-      options=options,
-      data_files=data_files,
+      options={'py2exe' : {'bundle_files' : 1}},
      )
+
+# Check OS compatibility
+WINDOWS = sys.platform == 'win32'
+LINUX = sys.platform == 'linux2'
+
+if not (WINDOWS or LINUX):
+    print "Unknown or unsupported OS.  Exiting script."
+    exit(1)
+
+
+# Set location of application data
+if LINUX:
+    app_data = r"%s/.timeclock" % os.getenv('HOME')
+    if not os.path.exists(app_data):
+        os.mkdir(app_data)
+if WINDOWS:
+    app_data = r"%s\AppData\Local\TimeClock" % os.getenv('USERPROFILE')
+    if not os.path.exists(app_data):
+        os.makedirs(app_data)
+
+# Copy data templates to app_data directory
+shutil.copyfile("data/timeclock_test.db", r"%s/timeclock_test.db" % app_data)
+shutil.copyfile("data/hoursreport.plt", r"%s/hoursreport.plt" % app_data)
+
+if sys.argv[1] == 'py2exe':
+    shutil.copyfile("dist/timeclock.exe", r"C:\Apps\timeclock.exe")
